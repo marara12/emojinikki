@@ -133,6 +133,10 @@ button{
 .item{
   padding:6px;
   border-bottom:1px solid #eee;
+  display:flex;
+  justify-content:flex-start;
+  gap:8px;
+  text-align:left;
 }
 
 /* 月タブ */
@@ -400,7 +404,7 @@ function renderList(){
 
     list.innerHTML+=`
       <div class="item" onclick="selectDay('${date}')">
-        ${d}日 ${v?v.emoji:""} ${v?v.comment:"（未記録）"}
+        ${d}日 ${v?v.emoji:""} ${v?v.comment:"（　　）"}
       </div>
     `;
   }
