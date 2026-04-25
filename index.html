@@ -22,7 +22,7 @@ body{
   border-radius:16px;
 }
 
-/* タブ */
+/* ===== タブ ===== */
 .tabs{
   display:flex;
   justify-content:center;
@@ -41,7 +41,7 @@ body{
   color:white;
 }
 
-/* 曜日 */
+/* ===== カレンダー ===== */
 .weekdays{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -50,7 +50,6 @@ body{
   margin-top:10px;
 }
 
-/* カレンダー */
 #calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -87,7 +86,7 @@ body{
   outline-offset:2px;
 }
 
-/* 入力 */
+/* ===== 入力 ===== */
 input,select{
   width:90%;
   padding:6px;
@@ -96,7 +95,7 @@ input,select{
   border:1px solid #ddd;
 }
 
-/* ボタン */
+/* ===== ボタン ===== */
 button{
   padding:8px 12px;
   border:none;
@@ -106,7 +105,7 @@ button{
   margin:5px;
 }
 
-/* グラフ */
+/* ===== グラフ ===== */
 .bar-wrap{
   display:flex;
   align-items:flex-end;
@@ -126,7 +125,7 @@ button{
   font-size:12px;
 }
 
-/* 月別 */
+/* ===== コメント ===== */
 .list{
   text-align:left;
 }
@@ -134,6 +133,31 @@ button{
 .item{
   padding:6px;
   border-bottom:1px solid #eee;
+}
+
+/* 月タブ */
+.month-tabs{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:4px;
+  margin:10px 0;
+}
+
+.month-tab{
+  font-size:12px;
+  padding:4px 0;
+  border-radius:6px;
+  background:#eee;
+  cursor:pointer;
+}
+
+.month-tab.active{
+  background:#ff8fab;
+  color:white;
+}
+
+.month-tab.today{
+  outline:2px solid #7dd3fc;
 }
 </style>
 </head>
@@ -149,13 +173,12 @@ button{
   <div class="tab" onclick="showTab('list')">コメント</div>
 </div>
 
-<!-- カレンダー -->
+<!-- ================= カレンダー ================= -->
 <div id="calView" class="card">
 
   <input type="month" id="monthPicker" onchange="changeMonth()">
   <button onclick="goToday()">今日へ</button>
 
-  <!-- 曜日（復活） -->
   <div class="weekdays">
     <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
   </div>
@@ -164,7 +187,6 @@ button{
 
   <hr>
 
-  <!-- ★絵文字1文字制限 -->
   <input id="emoji" placeholder="絵文字1つ" maxlength="2">
   <input id="comment" placeholder="コメント">
 
@@ -172,39 +194,37 @@ button{
 
 </div>
 
-<!-- グラフ -->
+<!-- ================= グラフ ================= -->
 <div id="graphView" class="card" style="display:none;">
 
   <h3>📊 グラフ</h3>
-
-  <!-- ボタン削除済み -->
 
   <div id="graph"></div>
 
 </div>
 
-<!-- コメント -->
+<!-- ================= コメント ================= -->
 <div id="listView" class="card" style="display:none;">
 
   <h3>コメント</h3>
 
-  <!-- 年スクロール -->
   <select id="yearSelect" onchange="renderList()"></select>
 
-  <!-- 月タブ -->
-  <div class="tabs">
-    <div class="tab" onclick="setMonth(1)">1</div>
-    <div class="tab" onclick="setMonth(2)">2</div>
-    <div class="tab" onclick="setMonth(3)">3</div>
-    <div class="tab" onclick="setMonth(4)">4</div>
-    <div class="tab" onclick="setMonth(5)">5</div>
-    <div class="tab" onclick="setMonth(6)">6</div>
-    <div class="tab" onclick="setMonth(7)">7</div>
-    <div class="tab" onclick="setMonth(8)">8</div>
-    <div class="tab" onclick="setMonth(9)">9</div>
-    <div class="tab" onclick="setMonth(10)">10</div>
-    <div class="tab" onclick="setMonth(11)">11</div>
-    <div class="tab" onclick="setMonth(12)">12</div>
+  <button onclick="goThisMonth()" id="todayBtn">今月へ</button>
+
+  <div class="month-tabs">
+    <div class="month-tab" onclick="setMonth(1)">1</div>
+    <div class="month-tab" onclick="setMonth(2)">2</div>
+    <div class="month-tab" onclick="setMonth(3)">3</div>
+    <div class="month-tab" onclick="setMonth(4)">4</div>
+    <div class="month-tab" onclick="setMonth(5)">5</div>
+    <div class="month-tab" onclick="setMonth(6)">6</div>
+    <div class="month-tab" onclick="setMonth(7)">7</div>
+    <div class="month-tab" onclick="setMonth(8)">8</div>
+    <div class="month-tab" onclick="setMonth(9)">9</div>
+    <div class="month-tab" onclick="setMonth(10)">10</div>
+    <div class="month-tab" onclick="setMonth(11)">11</div>
+    <div class="month-tab" onclick="setMonth(12)">12</div>
   </div>
 
   <div id="list"></div>
@@ -214,10 +234,11 @@ button{
 <script>
 
 let data = JSON.parse(localStorage.getItem("diary")||"{}");
-let mode="emoji";
 let current=new Date();
 let selectedDate=null;
+
 let selectedMonth=current.getMonth()+1;
+let selectedYear=current.getFullYear();
 
 /* ===== タブ ===== */
 function showTab(t){
@@ -235,10 +256,10 @@ function showTab(t){
   event.target.classList.add("active");
 }
 
-/* ===== 保存（絵文字1文字制限） ===== */
+/* ===== 保存（絵文字そのまま） ===== */
 function save(){
 
-  let e = [...emoji.value][0] || ""; // ←安全に1文字
+  let e = emoji.value.charAt(0);
   let c = comment.value;
 
   let date = selectedDate || new Date().toISOString().slice(0,10);
@@ -310,7 +331,7 @@ function goToday(){
   draw();
 }
 
-/* ===== グラフ（絵文字のみ） ===== */
+/* ===== グラフ ===== */
 function renderGraph(){
 
   let count={};
@@ -348,9 +369,7 @@ function renderGraph(){
   graph.appendChild(wrap);
 }
 
-/* ===== コメント（月別） ===== */
-let selectedYear=new Date().getFullYear();
-
+/* ===== コメント ===== */
 function initYear(){
   let sel=document.getElementById("yearSelect");
   sel.innerHTML="";
@@ -363,25 +382,50 @@ function initYear(){
 function setMonth(m){
   selectedMonth=m;
   renderList();
+  updateMonthUI();
 }
 
-/* ★修正：年＋月フィルタ */
 function renderList(){
 
   let y=document.getElementById("yearSelect").value;
 
   list.innerHTML="";
 
-  Object.entries(data)
-    .filter(([d])=>d.startsWith(`${y}-${String(selectedMonth).padStart(2,"0")}`))
-    .sort((a,b)=>new Date(a[0])-new Date(b[0]))
-    .forEach(([d,v])=>{
-      list.innerHTML+=`
-        <div class="item">
-          ${d.split("-")[2]} ${v.emoji} ${v.comment}
-        </div>
-      `;
-    });
+  let days=new Date(y,selectedMonth,0).getDate();
+
+  for(let d=1; d<=days; d++){
+
+    let date=`${y}-${String(selectedMonth).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    let v=data[date];
+
+    list.innerHTML+=`
+      <div class="item" onclick="selectDay('${date}')">
+        ${d}日 ${v?v.emoji:""} ${v?v.comment:"（未記録）"}
+      </div>
+    `;
+  }
+
+  updateMonthUI();
+}
+
+function goThisMonth(){
+  let d=new Date();
+  selectedYear=d.getFullYear();
+  selectedMonth=d.getMonth()+1;
+
+  document.getElementById("yearSelect").value=selectedYear;
+
+  renderList();
+  updateMonthUI();
+}
+
+function updateMonthUI(){
+
+  document.querySelectorAll(".month-tab").forEach((el,i)=>{
+    let m=i+1;
+    el.classList.toggle("active",m===selectedMonth);
+    el.classList.toggle("today",m===new Date().getMonth()+1);
+  });
 }
 
 /* ===== 今日 ===== */
