@@ -357,7 +357,7 @@ function renderGraph(){
   wrap.className="bar-wrap";
 
   let max=Math.max(...Object.values(count),1);
-
+let percent = ((v / Object.values(count).reduce((a,b)=>a+b,0)) * 100).toFixed(1);
   Object.entries(count).forEach(([k,v])=>{
 
     let box=document.createElement("div");
