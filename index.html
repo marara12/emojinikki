@@ -15,32 +15,34 @@ body{
 }
 
 .card{
-  max-width:450px;
+  max-width:430px;
   margin:20px auto;
   background:white;
   padding:20px;
   border-radius:16px;
 }
 
-/* 入力 */
-input{
-  width:90%;
-  padding:8px;
-  margin:5px;
-  border-radius:10px;
-  border:1px solid #ddd;
+/* ===== タブ ===== */
+.tabs{
+  display:flex;
+  gap:5px;
+  justify-content:center;
+  margin-bottom:10px;
 }
 
-button{
+.tab{
   padding:8px 12px;
-  border:none;
+  background:#eee;
   border-radius:10px;
+  cursor:pointer;
+}
+
+.tab.active{
   background:#ff8fab;
   color:white;
-  margin:5px;
 }
 
-/* カレンダー */
+/* ===== カレンダー ===== */
 #calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -57,7 +59,6 @@ button{
   align-items:center;
   justify-content:center;
   position:relative;
-  cursor:pointer;
 }
 
 .day-num{
@@ -72,7 +73,7 @@ button{
   border:2px solid #ff8fab;
 }
 
-/* グラフ */
+/* ===== グラフ（棒） ===== */
 .bar-wrap{
   display:flex;
   align-items:flex-end;
@@ -83,25 +84,35 @@ button{
 }
 
 .bar{
-  width:25px;
+  width:28px;
   background:#ff8fab;
   border-radius:6px 6px 0 0;
   display:flex;
   align-items:flex-end;
   justify-content:center;
-  font-size:14px;
-  color:#333;
+  font-size:12px;
 }
 
-.bar-label{
-  margin-top:5px;
+/* ラベル */
+.label{
   font-size:14px;
+  margin-top:6px;
 }
 
-/* カテゴリ */
-select{
+/* ===== UI ===== */
+input,select{
   padding:6px;
+  margin:5px;
   border-radius:10px;
+  border:1px solid #ddd;
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:10px;
+  background:#ff8fab;
+  color:white;
   margin:5px;
 }
 </style>
@@ -111,7 +122,14 @@ select{
 
 <h1>🎀絵文字日記</h1>
 
-<div class="card">
+<!-- タブ -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('cal')">カレンダー</div>
+  <div class="tab" onclick="switchTab('graph')">グラフ</div>
+</div>
+
+<!-- ================= カレンダー ================= -->
+<div id="calView" class="card">
 
   <div id="calendar"></div>
 
@@ -123,127 +141,159 @@ select{
   <select id="category">
     <option value="感情">感情</option>
     <option value="ご飯">ご飯</option>
-    <option value="その他">その他</option>
   </select>
 
-  <button onclick="addCategory()">＋カテゴリ追加</button>
-
+  <button onclick="addCategory()">カテゴリ追加</button>
   <button onclick="save()">保存</button>
 
-  <button onclick="setGraph('all')">全体グラフ</button>
-  <button onclick="setGraph('category')">カテゴリ別</button>
+</div>
+
+<!-- ================= グラフ ================= -->
+<div id="graphView" class="card" style="display:none;">
+
+  <h3>📊 グラフ</h3>
 
   <select id="sort" onchange="renderGraph()">
     <option value="desc">多い順</option>
     <option value="asc">少ない順</option>
   </select>
 
-</div>
-
-<!-- グラフ -->
-<div class="card">
+  <button onclick="mode='emoji';renderGraph()">絵文字</button>
+  <button onclick="mode='category';renderGraph()">カテゴリ</button>
 
   <div id="graph"></div>
-
-  <div id="emojiList"></div>
+  <div id="labels"></div>
 
 </div>
 
 <script>
 
 let data = JSON.parse(localStorage.getItem("diary")||"{}");
-let currentGraph="all";
+let mode="emoji";
 
-/* ===== 絵文字フィルタ（文字化け防止） ===== */
-function onlyEmoji(str){
-  return [...str].filter(c=>/\p{Emoji}/u.test(c)).join("").slice(0,1);
+/* ===== タブ切替 ===== */
+function switchTab(t){
+
+  document.querySelectorAll(".tab").forEach(el=>el.classList.remove("active"));
+
+  if(t==="cal"){
+    calView.style.display="block";
+    graphView.style.display="none";
+  }else{
+    calView.style.display="none";
+    graphView.style.display="block";
+    renderGraph();
+  }
 }
 
 /* ===== 保存 ===== */
 function save(){
 
-  let e = onlyEmoji(emoji.value);
-  let c = comment.value;
-  let cat = category.value;
+  let e=[...emoji.value].filter(c=>/\p{Emoji}/u.test(c)).join("").slice(0,1);
+  let c=comment.value;
+  let cat=category.value;
 
-  let date = new Date().toISOString().slice(0,10);
+  let date=new Date().toISOString().slice(0,10);
 
-  data[date] = {emoji:e,comment:c,category:cat};
+  data[date]={emoji:e,comment:c,category:cat};
 
   localStorage.setItem("diary",JSON.stringify(data));
 
-  renderGraph();
+  draw();
 }
 
-/* ===== カテゴリ追加 ===== */
-function addCategory(){
+/* ===== カレンダー ===== */
+function draw(){
 
-  let name = prompt("カテゴリ名を入力");
+  let cal=document.getElementById("calendar");
+  cal.innerHTML="";
 
-  if(!name) return;
+  let d=new Date();
+  let y=d.getFullYear();
+  let m=d.getMonth();
 
-  let opt = document.createElement("option");
-  opt.value = name;
-  opt.textContent = name;
+  let first=new Date(y,m,1);
+  let last=new Date(y,m+1,0);
 
-  category.appendChild(opt);
+  for(let i=0;i<first.getDay();i++) cal.innerHTML+="<div></div>";
+
+  for(let i=1;i<=last.getDate();i++){
+
+    let date=`${y}-${String(m+1).padStart(2,"0")}-${String(i).padStart(2,"0")}`;
+
+    let item=data[date];
+
+    cal.innerHTML+=`
+      <div class="day ${date===getToday()?'today':''}">
+        <div class="day-num">${i}</div>
+        <div>${item?item.emoji:""}</div>
+      </div>
+    `;
+  }
 }
 
-/* ===== グラフ切替 ===== */
-function setGraph(type){
-  currentGraph=type;
-  renderGraph();
-}
-
-/* ===== グラフ描画（棒グラフ） ===== */
+/* ===== グラフ ===== */
 function renderGraph(){
 
   let count={};
 
   for(let v of Object.values(data)){
-
-    if(currentGraph==="category"){
-      count[v.category]=(count[v.category]||0)+1;
-    }else{
-      count[v.emoji]=(count[v.emoji]||0)+1;
-    }
+    let key = mode==="emoji" ? v.emoji : v.category;
+    if(key) count[key]=(count[key]||0)+1;
   }
 
-  let sorted = Object.entries(count);
+  let arr=Object.entries(count);
 
   if(sort.value==="desc"){
-    sorted.sort((a,b)=>b[1]-a[1]);
+    arr.sort((a,b)=>b[1]-a[1]);
   }else{
-    sorted.sort((a,b)=>a[1]-b[1]);
+    arr.sort((a,b)=>a[1]-b[1]);
   }
 
-  let max = Math.max(...sorted.map(v=>v[1]),1);
+  let max=Math.max(...arr.map(v=>v[1]),1);
 
   graph.innerHTML="";
-  emojiList.innerHTML="";
+  labels.innerHTML="";
 
-  let wrap = document.createElement("div");
+  let wrap=document.createElement("div");
   wrap.className="bar-wrap";
 
-  sorted.forEach(([k,v])=>{
+  arr.forEach(([k,v])=>{
 
-    let bar = document.createElement("div");
+    let bar=document.createElement("div");
     bar.className="bar";
-
-    bar.style.height = (v/max*180)+"px";
-
-    bar.innerHTML = `<div>${v}</div>`;
+    bar.style.height=(v/max*180)+"px";
+    bar.innerHTML=v;
 
     wrap.appendChild(bar);
 
-    emojiList.innerHTML += `<div class="bar-label">${k}</div>`;
+    labels.innerHTML+=`<div class="label">${k}</div>`;
   });
 
   graph.appendChild(wrap);
 }
 
-/* 初期 */
-renderGraph();
+/* ===== カテゴリ追加 ===== */
+function addCategory(){
+
+  let name=prompt("カテゴリ名");
+
+  if(!name) return;
+
+  let opt=document.createElement("option");
+  opt.value=name;
+  opt.textContent=name;
+
+  category.appendChild(opt);
+}
+
+/* ===== 今日 ===== */
+function getToday(){
+  let d=new Date();
+  return d.toISOString().slice(0,10);
+}
+
+draw();
 
 </script>
 
