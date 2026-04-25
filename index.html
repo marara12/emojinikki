@@ -27,7 +27,6 @@ body{
   display:flex;
   justify-content:center;
   gap:6px;
-  margin-bottom:10px;
 }
 
 .tab{
@@ -73,11 +72,6 @@ body{
   border:2px solid #ff8fab;
 }
 
-.active{
-  outline:2px solid #7dd3fc;
-  outline-offset:2px;
-}
-
 /* ===== 入力 ===== */
 input,select{
   width:90%;
@@ -117,20 +111,9 @@ button{
   font-size:12px;
 }
 
-/* グラフラベル */
 .label{
   font-size:14px;
   margin-top:6px;
-}
-
-/* ===== 月別一覧 ===== */
-.list{
-  text-align:left;
-}
-
-.item{
-  padding:6px;
-  border-bottom:1px solid #eee;
 }
 </style>
 </head>
@@ -139,7 +122,7 @@ button{
 
 <h1>🎀絵文字日記</h1>
 
-<!-- ===== タブ ===== -->
+<!-- タブ -->
 <div class="tabs">
   <div class="tab active" onclick="showTab('cal')">カレンダー</div>
   <div class="tab" onclick="showTab('graph')">グラフ</div>
@@ -149,10 +132,8 @@ button{
 <!-- ================= カレンダー ================= -->
 <div id="calView" class="card">
 
-  <div>
-    <input type="month" id="monthPicker" onchange="changeMonth()">
-    <button onclick="goToday()">今日へ</button>
-  </div>
+  <input type="month" id="monthPicker" onchange="changeMonth()">
+  <button onclick="goToday()">今日へ</button>
 
   <div id="calendar"></div>
 
@@ -161,10 +142,8 @@ button{
   <input id="emoji" placeholder="絵文字1つ">
   <input id="comment" placeholder="コメント">
 
-  <!-- ★デフォルトなし -->
   <select id="category"></select>
 
-  <button onclick="addCategory()">カテゴリ追加</button>
   <button onclick="save()">保存</button>
 
 </div>
@@ -174,29 +153,25 @@ button{
 
   <h3>📊 グラフ</h3>
 
-  <select id="sort" onchange="renderGraph()">
-    <option value="desc">多い順</option>
-    <option value="asc">少ない順</option>
-  </select>
+  <!-- カテゴリ追加はここだけ -->
+  <button onclick="addCategory()">＋カテゴリ追加</button>
 
   <button onclick="mode='emoji';renderGraph()">絵文字</button>
   <button onclick="mode='category';renderGraph()">カテゴリ</button>
-
-  <button onclick="addCategory()">＋カテゴリ追加</button>
 
   <div id="graph"></div>
 
 </div>
 
-<!-- ================= 月別一覧 ================= -->
+<!-- ================= 月別 ================= -->
 <div id="listView" class="card" style="display:none;">
 
   <h3>📒 月別コメント</h3>
 
   <input type="month" id="listMonth" onchange="renderList()">
-  <button onclick="goTodayMonth()">今月へ</button>
+  <button onclick="goThisMonth()">今月へ</button>
 
-  <div id="list" class="list"></div>
+  <div id="list"></div>
 
 </div>
 
@@ -205,7 +180,6 @@ button{
 let data = JSON.parse(localStorage.getItem("diary")||"{}");
 let mode="emoji";
 let current=new Date();
-let selected=null;
 
 /* ===== タブ ===== */
 function showTab(t){
@@ -223,18 +197,22 @@ function showTab(t){
   event.target.classList.add("active");
 }
 
+/* ===== 絵文字修正（文字化け防止） ===== */
+function safeEmoji(str){
+  return [...str]
+    .filter(c=>/\p{Extended_Pictographic}/u.test(c))
+    .slice(0,1)
+    .join("");
+}
+
 /* ===== 保存 ===== */
 function save(){
 
-  let e=[...emoji.value]
-    .filter(c=>/\p{Emoji}/u.test(c))
-    .join("")
-    .slice(0,1);
+  let e = safeEmoji(emoji.value);
+  let c = comment.value;
+  let cat = category.value || "";
 
-  let c=comment.value;
-  let cat=category.value || "";
-
-  let date=new Date().toISOString().slice(0,10);
+  let date = new Date().toISOString().slice(0,10);
 
   data[date]={emoji:e,comment:c,category:cat};
 
@@ -274,7 +252,7 @@ function draw(){
   }
 }
 
-/* ===== 月変更 ===== */
+/* ===== 月移動 ===== */
 function changeMonth(){
   let [y,m]=monthPicker.value.split("-");
   current=new Date(y,m-1,1);
@@ -297,13 +275,6 @@ function renderGraph(){
   }
 
   let arr=Object.entries(count);
-
-  if(sort.value==="desc"){
-    arr.sort((a,b)=>b[1]-a[1]);
-  }else{
-    arr.sort((a,b)=>a[1]-b[1]);
-  }
-
   let max=Math.max(...arr.map(v=>v[1]),1);
 
   graph.innerHTML="";
@@ -333,7 +304,7 @@ function renderGraph(){
   graph.appendChild(wrap);
 }
 
-/* ===== 月別一覧 ===== */
+/* ===== 月別 ===== */
 function renderList(){
 
   let m=listMonth.value;
@@ -346,17 +317,29 @@ function renderList(){
 
   arr.forEach(([d,v])=>{
     list.innerHTML+=`
-      <div class="item">
-        ${d} ${v.emoji} ${v.comment} ${v.category?`(${v.category})`:``}
+      <div>
+        ${d} ${v.emoji} ${v.comment}
       </div>
     `;
   });
 }
 
-/* ===== カテゴリ追加（完全自由） ===== */
+/* ===== 今月へ（修正版） ===== */
+function goThisMonth(){
+
+  let d=new Date();
+
+  let m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+
+  listMonth.value=m;
+
+  renderList();
+}
+
+/* ===== カテゴリ追加 ===== */
 function addCategory(){
 
-  let name=prompt("カテゴリ名を入力");
+  let name=prompt("カテゴリ名");
 
   if(!name) return;
 
@@ -372,7 +355,6 @@ function getToday(){
   return new Date().toISOString().slice(0,10);
 }
 
-/* 初期 */
 draw();
 
 </script>
