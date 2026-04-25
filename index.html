@@ -201,7 +201,7 @@ button{
 <!-- ================= グラフ ================= -->
 <div id="graphView" class="card" style="display:none;">
 
-  <h3>📊 グラフ</h3>
+  <h3>グラフ</h3>
 
   <div id="graph"></div>
 
@@ -210,7 +210,7 @@ button{
 <!-- ================= コメント ================= -->
 <div id="listView" class="card" style="display:none;">
 
-  <h3>コメント</h3>
+  <h3>月別コメント</h3>
 
   <select id="yearSelect" onchange="renderList()"></select>
 
@@ -404,7 +404,7 @@ function renderList(){
 
     list.innerHTML+=`
       <div class="item" onclick="selectDay('${date}')">
-        ${d}日 ${v?v.emoji:""} ${v?v.comment:"（　　）"}
+        ${d}日 ${v?v.emoji:""} ${v?v.comment:"  "}
       </div>
     `;
   }
