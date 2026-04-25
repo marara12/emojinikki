@@ -342,6 +342,7 @@ function goToday(){
 }
 
 /* ===== グラフ ===== */
+
 function renderGraph(){
 
   let count={};
@@ -357,16 +358,17 @@ function renderGraph(){
   wrap.className="bar-wrap";
 
   let max=Math.max(...Object.values(count),1);
-let percent = ((v / Object.values(count).reduce((a,b)=>a+b,0)) * 100).toFixed(1);
-  Object.entries(count).forEach(([k,
-                                  
+
+  Object.entries(count).forEach(([k,v])=>{
+
+    let percent = ((v / Object.values(count).reduce((a,b)=>a+b,0)) * 100).toFixed(1);
+
     let box=document.createElement("div");
 
     let bar=document.createElement("div");
     bar.className="bar";
     bar.style.height=(v/max*180)+"px";
     bar.title = percent + "%";
-    
 
     let label=document.createElement("div");
     label.innerText=k;
@@ -379,7 +381,6 @@ let percent = ((v / Object.values(count).reduce((a,b)=>a+b,0)) * 100).toFixed(1)
 
   graph.appendChild(wrap);
 }
-
 /* ===== コメント ===== */
 function initYear(){
   let sel=document.getElementById("yearSelect");
