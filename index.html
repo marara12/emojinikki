@@ -73,7 +73,6 @@ body{
   border:2px solid #ff8fab;
 }
 
-/* 選択ハイライト（復活） */
 .selected{
   outline:3px solid #7dd3fc;
   outline-offset:2px;
@@ -88,6 +87,7 @@ input,select{
   border:1px solid #ddd;
 }
 
+/* ボタン */
 button{
   padding:8px 12px;
   border:none;
@@ -117,9 +117,14 @@ button{
   font-size:12px;
 }
 
-.label{
-  font-size:14px;
-  margin-top:6px;
+/* 月別一覧（左揃え修正） */
+.list{
+  text-align:left;
+}
+
+.item{
+  padding:6px;
+  border-bottom:1px solid #eee;
 }
 </style>
 </head>
@@ -135,7 +140,7 @@ button{
   <div class="tab" onclick="showTab('list')">月別</div>
 </div>
 
-<!-- ================= カレンダー ================= -->
+<!-- カレンダー -->
 <div id="calView" class="card">
 
   <input type="month" id="monthPicker" onchange="changeMonth()">
@@ -152,21 +157,18 @@ button{
 
 </div>
 
-<!-- ================= グラフ ================= -->
+<!-- グラフ -->
 <div id="graphView" class="card" style="display:none;">
 
   <h3>📊 グラフ</h3>
 
   <button onclick="mode='emoji';renderGraph()">絵文字</button>
-  <button onclick="mode='category';renderGraph()">カテゴリ</button>
-
-  <button onclick="addCategory()">＋カテゴリ追加</button>
 
   <div id="graph"></div>
 
 </div>
 
-<!-- ================= 月別 ================= -->
+<!-- 月別 -->
 <div id="listView" class="card" style="display:none;">
 
   <h3>📒 月別コメント</h3>
@@ -201,10 +203,10 @@ function showTab(t){
   event.target.classList.add("active");
 }
 
-/* ===== 保存（文字化け修正済み） ===== */
+/* ===== ★絵文字修正（完全版：そのまま保存） ===== */
 function save(){
 
-  let e = emoji.value.trim().charAt(0); // ←これが正解（壊さない）
+  let e = emoji.value;   // ←フィルタ削除（これが正解）
   let c = comment.value;
 
   let date = selectedDate || new Date().toISOString().slice(0,10);
@@ -251,7 +253,7 @@ function draw(){
   }
 }
 
-/* ===== 日付選択（復活機能） ===== */
+/* ===== 日付選択 ===== */
 function selectDay(date){
 
   selectedDate = date;
@@ -281,13 +283,13 @@ function goToday(){
   draw();
 }
 
-/* ===== グラフ ===== */
+/* ===== グラフ（絵文字のみ） ===== */
 function renderGraph(){
 
   let count={};
 
   for(let v of Object.values(data)){
-    let key = mode==="emoji" ? v.emoji : (v.category||"未分類");
+    let key = v.emoji;
     if(key) count[key]=(count[key]||0)+1;
   }
 
@@ -308,7 +310,6 @@ function renderGraph(){
     bar.innerHTML=v;
 
     let label=document.createElement("div");
-    label.className="label";
     label.innerText=k;
 
     box.appendChild(bar);
@@ -332,7 +333,9 @@ function renderList(){
     .sort((a,b)=>new Date(a[0])-new Date(b[0]))
     .forEach(([d,v])=>{
       list.innerHTML+=`
-        <div>${d} ${v.emoji} ${v.comment}</div>
+        <div class="item">
+          ${d} ${v.emoji} ${v.comment}
+        </div>
       `;
     });
 }
