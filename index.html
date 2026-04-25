@@ -358,8 +358,8 @@ function renderGraph(){
 
   let max=Math.max(...Object.values(count),1);
 let percent = ((v / Object.values(count).reduce((a,b)=>a+b,0)) * 100).toFixed(1);
-  Object.entries(count).forEach(([k,v])=>{
-
+  Object.entries(count).forEach(([k,
+                                  
     let box=document.createElement("div");
 
     let bar=document.createElement("div");
