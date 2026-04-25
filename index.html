@@ -3,22 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>絵文字日記</title>
 
 <style>
 body{
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  background:#fafafa;
+  font-family:-apple-system,sans-serif;
   text-align:center;
+  background:#fafafa;
+  margin:0;
   padding:20px;
-  color:#333;
 }
 
+h1{margin:10px 0;}
+
 .card{
-  background:white;
   max-width:420px;
   margin:20px auto;
+  background:white;
   padding:20px;
   border-radius:16px;
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
@@ -34,57 +35,53 @@ input{
 }
 
 button{
-  margin-top:10px;
-  width:100%;
-  padding:12px;
+  padding:10px;
   border:none;
-  border-radius:12px;
+  border-radius:10px;
   background:#ff8fab;
   color:white;
-  font-size:16px;
+  margin:5px;
+  width:120px;
 }
 
-button:active{
-  transform:scale(0.98);
-}
+button:active{transform:scale(0.95);}
 
-/* カレンダー */
-.calendar{
+#calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
   gap:5px;
-  margin-top:20px;
+  margin-top:15px;
 }
 
 .day{
-  background:#f3f3f3;
+  background:#eee;
   padding:8px;
   border-radius:8px;
-  font-size:12px;
   min-height:40px;
+  font-size:12px;
 }
 
-.day span{
-  display:block;
-  font-size:16px;
-  margin-top:5px;
+.today{
+  background:#ffe3ea;
+  border:2px solid #ff8fab;
 }
 
-/* トースト */
-.toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#333;
-  color:white;
-  padding:10px 16px;
-  border-radius:20px;
-  opacity:0;
-  transition:0.3s;
+nav{
+  margin-top:20px;
 }
-.toast.show{
-  opacity:1;
+
+.page{display:none;}
+.active{display:block;}
+
+.footer{
+  font-size:12px;
+  margin-top:20px;
+}
+
+.footer a{
+  margin:0 10px;
+  color:#666;
+  text-decoration:none;
 }
 </style>
 </head>
@@ -93,91 +90,151 @@ button:active{
 
 <h1>📔 絵文字日記</h1>
 
-<div class="card">
+<!-- ホーム -->
+<div id="home" class="page active">
+  <div class="card">
 
-  <p>今日の気分（絵文字だけ）</p>
+    <input id="input" placeholder="😊🌧️🍜">
 
-  <input id="input" placeholder="例：😊🌧️🍜">
+    <div>
+      <button onclick="save()">保存</button>
+      <button onclick="go('stats')">📊</button>
+    </div>
 
-  <button onclick="saveDiary()">保存する</button>
+    <h3 id="label"></h3>
+    <div id="calendar"></div>
 
-  <h3>📅 カレンダー</h3>
-  <div id="calendar" class="calendar"></div>
-
+  </div>
 </div>
 
-<div id="toast" class="toast">保存しました</div>
+<!-- stats -->
+<div id="stats" class="page">
+  <div class="card">
+    <h2>📊 分析</h2>
+    <div id="chart"></div>
+    <button onclick="go('home')">戻る</button>
+  </div>
+</div>
+
+<!-- about -->
+<div id="about" class="page">
+  <div class="card">
+    <h2>About</h2>
+    <p>絵文字で日記を残すシンプルアプリ</p>
+    <button onclick="go('home')">戻る</button>
+  </div>
+</div>
+
+<!-- privacy -->
+<div id="privacy" class="page">
+  <div class="card">
+    <h2>Privacy</h2>
+    <p>データは端末内に保存され外部送信なし</p>
+    <button onclick="go('home')">戻る</button>
+  </div>
+</div>
+
+<div class="footer">
+  <a onclick="go('about')">About</a>
+  <a onclick="go('privacy')">Privacy</a>
+</div>
 
 <script>
 
-const input = document.getElementById("input");
-const calendar = document.getElementById("calendar");
-const toast = document.getElementById("toast");
+/* ========= ページ切替 ========= */
+function go(page){
+  document.querySelectorAll(".page").forEach(p=>{
+    p.classList.remove("active");
+  });
+  document.getElementById(page).classList.add("active");
 
-loadCalendar();
+  if(page==="stats") loadStats();
+}
 
-function saveDiary(){
-  const value = input.value.trim();
-  if(!value) return;
+/* ========= 日記保存 ========= */
+function save(){
 
-  const today = new Date().toISOString().split("T")[0];
+  const val = input.value.trim();
+  if(!val) return;
 
-  let data = JSON.parse(localStorage.getItem("diary") || "{}");
+  const date = getToday();
 
-  data[today] = value;
+  let data = JSON.parse(localStorage.getItem("diary")||"{}");
 
-  localStorage.setItem("diary", JSON.stringify(data));
+  data[date] = val;
 
-  input.value = "";
+  localStorage.setItem("diary",JSON.stringify(data));
 
-  showToast("保存しました！");
+  input.value="";
   loadCalendar();
 }
 
+/* ========= カレンダー ========= */
+const cal = document.getElementById("calendar");
+const input = document.getElementById("input");
+
+loadCalendar();
+
 function loadCalendar(){
 
-  calendar.innerHTML = "";
+  cal.innerHTML="";
 
-  let data = JSON.parse(localStorage.getItem("diary") || "{}");
+  let data = JSON.parse(localStorage.getItem("diary")||"{}");
 
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const y = now.getFullYear();
+  const m = now.getMonth();
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month+1, 0);
+  document.getElementById("label").innerText =
+    `${y} / ${m+1}`;
 
-  // 月初の曜日分空白
-  for(let i=0;i<firstDay.getDay();i++){
-    const empty = document.createElement("div");
-    empty.className = "day";
-    calendar.appendChild(empty);
+  const first = new Date(y,m,1);
+  const last = new Date(y,m+1,0);
+
+  for(let i=0;i<first.getDay();i++){
+    cal.innerHTML += `<div></div>`;
   }
 
-  // 日付生成
-  for(let d=1; d<=lastDay.getDate(); d++){
+  for(let d=1;d<=last.getDate();d++){
 
-    const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const date = format(y,m,d);
+    const today = getToday();
 
-    const div = document.createElement("div");
-    div.className = "day";
-
-    div.innerHTML = `
-      ${d}
-      <span>${data[dateStr] || ""}</span>
+    cal.innerHTML += `
+      <div class="day ${date===today?'today':''}">
+        ${d}<br>${data[date]||""}
+      </div>
     `;
-
-    calendar.appendChild(div);
   }
 }
 
-function showToast(msg){
-  toast.innerText = msg;
-  toast.classList.add("show");
+/* ========= stats ========= */
+function loadStats(){
 
-  setTimeout(()=>{
-    toast.classList.remove("show");
-  },1500);
+  let data = JSON.parse(localStorage.getItem("diary")||"{}");
+
+  let count={};
+
+  Object.values(data).forEach(v=>{
+    for(let e of v){
+      count[e]=(count[e]||0)+1;
+    }
+  });
+
+  document.getElementById("chart").innerHTML =
+    Object.entries(count)
+    .map(([k,v])=>`${k} ${"█".repeat(v)}`)
+    .join("<br>");
+}
+
+/* ========= utils ========= */
+function getToday(){
+  const d=new Date();
+  return format(d.getFullYear(),d.getMonth(),d.getDate());
+}
+
+function format(y,m,d){
+  return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 }
 
 </script>
