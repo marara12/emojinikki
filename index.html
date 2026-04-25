@@ -14,26 +14,24 @@ body{
   padding:20px;
 }
 
-h1{margin:10px 0;}
-
+/* カード */
 .card{
   max-width:420px;
   margin:20px auto;
   background:white;
   padding:20px;
   border-radius:16px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.05);
 }
 
+/* 入力 */
 input{
   width:90%;
   padding:12px;
   font-size:18px;
   text-align:center;
-  border-radius:10px;
-  border:1px solid #ddd;
 }
 
+/* ボタン */
 button{
   padding:10px;
   border:none;
@@ -41,47 +39,72 @@ button{
   background:#ff8fab;
   color:white;
   margin:5px;
-  width:120px;
 }
 
-button:active{transform:scale(0.95);}
-
+/* カレンダー */
 #calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
   gap:5px;
-  margin-top:15px;
+  margin-top:10px;
 }
 
 .day{
   background:#eee;
-  padding:8px;
   border-radius:8px;
-  min-height:40px;
+  padding:8px;
+  min-height:45px;
   font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
+/* 今日 */
 .today{
-  background:#ffe3ea;
   border:2px solid #ff8fab;
+  background:#ffe3ea;
 }
 
-nav{
-  margin-top:20px;
+/* 月タイトル */
+#month{
+  cursor:pointer;
+  font-weight:bold;
 }
 
-.page{display:none;}
-.active{display:block;}
-
-.footer{
-  font-size:12px;
-  margin-top:20px;
+/* モーダル */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.4);
 }
 
-.footer a{
-  margin:0 10px;
-  color:#666;
-  text-decoration:none;
+.modal-content{
+  background:white;
+  margin:20% auto;
+  padding:20px;
+  width:80%;
+  border-radius:12px;
+}
+
+/* 円グラフ */
+.circle{
+  width:200px;
+  height:200px;
+  margin:20px auto;
+  border-radius:50%;
+  background:conic-gradient(#ff8fab 0deg,#ffd1dc 120deg,#cdeffd 240deg,#eee 360deg);
+}
+
+/* 検索結果 */
+.result{
+  cursor:pointer;
+  padding:5px;
+  background:#f5f5f5;
+  margin:5px;
+  border-radius:6px;
 }
 </style>
 </head>
@@ -90,128 +113,142 @@ nav{
 
 <h1>📔 絵文字日記</h1>
 
-<!-- ホーム -->
-<div id="home" class="page active">
-  <div class="card">
+<div class="card">
 
-    <input id="input" placeholder="😊🌧️🍜">
+  <div id="month" onclick="openPicker()">2026 / 4 ▼</div>
 
-    <div>
-      <button onclick="save()">保存</button>
-      <button onclick="go('stats')">📊</button>
-    </div>
+  <input id="input" placeholder="絵文字3つまで" maxlength="3">
 
-    <h3 id="label"></h3>
-    <div id="calendar"></div>
+  <div>
+    <button onclick="save()">保存</button>
+    <button onclick="openStats()">📊</button>
+  </div>
 
+  <div id="calendar"></div>
+
+  <hr>
+
+  <input id="search" placeholder="絵文字検索" oninput="searchEmoji()">
+  <div id="searchResult"></div>
+
+</div>
+
+<!-- 月選択 -->
+<div id="picker" class="modal">
+  <div class="modal-content">
+    <h3>年月選択</h3>
+    <input type="number" id="year" value="2026">
+    <input type="number" id="month" value="4">
+    <button onclick="setMonth()">決定</button>
   </div>
 </div>
 
 <!-- stats -->
-<div id="stats" class="page">
-  <div class="card">
-    <h2>📊 分析</h2>
+<div id="stats" class="modal">
+  <div class="modal-content">
+    <h3>📊 分析</h3>
+    <div class="circle"></div>
     <div id="chart"></div>
-    <button onclick="go('home')">戻る</button>
+    <button onclick="closeStats()">閉じる</button>
   </div>
-</div>
-
-<!-- about -->
-<div id="about" class="page">
-  <div class="card">
-    <h2>About</h2>
-    <p>絵文字で日記を残すシンプルアプリ</p>
-    <button onclick="go('home')">戻る</button>
-  </div>
-</div>
-
-<!-- privacy -->
-<div id="privacy" class="page">
-  <div class="card">
-    <h2>Privacy</h2>
-    <p>データは端末内に保存され外部送信なし</p>
-    <button onclick="go('home')">戻る</button>
-  </div>
-</div>
-
-<div class="footer">
-  <a onclick="go('about')">About</a>
-  <a onclick="go('privacy')">Privacy</a>
 </div>
 
 <script>
 
-/* ========= ページ切替 ========= */
-function go(page){
-  document.querySelectorAll(".page").forEach(p=>{
-    p.classList.remove("active");
-  });
-  document.getElementById(page).classList.add("active");
+let current = new Date(2026,3,1);
 
-  if(page==="stats") loadStats();
-}
-
-/* ========= 日記保存 ========= */
+/* 保存 */
 function save(){
 
-  const val = input.value.trim();
-  if(!val) return;
+  let val = input.value.trim();
 
-  const date = getToday();
+  if(val.length>3){
+    alert("絵文字は3つまで");
+    return;
+  }
 
   let data = JSON.parse(localStorage.getItem("diary")||"{}");
 
-  data[date] = val;
+  let date = selected || getToday();
+
+  data[date]=val;
 
   localStorage.setItem("diary",JSON.stringify(data));
 
   input.value="";
-  loadCalendar();
+  draw();
 }
 
-/* ========= カレンダー ========= */
-const cal = document.getElementById("calendar");
-const input = document.getElementById("input");
+/* カレンダー */
+let selected=null;
 
-loadCalendar();
+function draw(){
 
-function loadCalendar(){
-
+  const cal = document.getElementById("calendar");
   cal.innerHTML="";
 
   let data = JSON.parse(localStorage.getItem("diary")||"{}");
 
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
+  let y=current.getFullYear();
+  let m=current.getMonth();
 
-  document.getElementById("label").innerText =
+  document.getElementById("month").innerText =
     `${y} / ${m+1}`;
 
-  const first = new Date(y,m,1);
-  const last = new Date(y,m+1,0);
+  const first=new Date(y,m,1);
+  const last=new Date(y,m+1,0);
 
   for(let i=0;i<first.getDay();i++){
-    cal.innerHTML += `<div></div>`;
+    cal.innerHTML+="<div></div>";
   }
 
   for(let d=1;d<=last.getDate();d++){
 
-    const date = format(y,m,d);
-    const today = getToday();
+    let date=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 
-    cal.innerHTML += `
-      <div class="day ${date===today?'today':''}">
+    let today=date===getToday();
+
+    cal.innerHTML+=`
+      <div class="day ${today?'today':''}"
+        onclick="select('${date}')">
         ${d}<br>${data[date]||""}
       </div>
     `;
   }
 }
 
-/* ========= stats ========= */
-function loadStats(){
+/* 日付選択 */
+function select(d){
+  selected=d;
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
+  input.value=data[d]||"";
+}
 
-  let data = JSON.parse(localStorage.getItem("diary")||"{}");
+/* 今日 */
+function getToday(){
+  let d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+/* 月変更 */
+function openPicker(){
+  picker.style.display="block";
+}
+
+function setMonth(){
+  let y=year.value;
+  let m=month.value-1;
+  current=new Date(y,m,1);
+  picker.style.display="none";
+  draw();
+}
+
+/* stats */
+function openStats(){
+
+  stats.style.display="block";
+
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
 
   let count={};
 
@@ -221,21 +258,40 @@ function loadStats(){
     }
   });
 
-  document.getElementById("chart").innerHTML =
+  chart.innerHTML=
     Object.entries(count)
-    .map(([k,v])=>`${k} ${"█".repeat(v)}`)
+    .map(([k,v])=>`${k} : ${"●".repeat(v)}`)
     .join("<br>");
 }
 
-/* ========= utils ========= */
-function getToday(){
-  const d=new Date();
-  return format(d.getFullYear(),d.getMonth(),d.getDate());
+function closeStats(){
+  stats.style.display="none";
 }
 
-function format(y,m,d){
-  return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+/* 検索 */
+function searchEmoji(){
+
+  let q=search.value;
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
+
+  searchResult.innerHTML="";
+
+  for(let [date,val] of Object.entries(data)){
+
+    if(val.includes(q) && q){
+
+      let div=document.createElement("div");
+      div.className="result";
+      div.innerText=`${date} ${val}`;
+
+      div.onclick=()=>select(date);
+
+      searchResult.appendChild(div);
+    }
+  }
 }
+
+draw();
 
 </script>
 
