@@ -5,13 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>絵文字日記</title>
 
+<!-- 可愛いフォント -->
+<link href="https://fonts.googleapis.com/css2?family=Rounded+M+PLUS+1c:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
 body{
-  font-family:-apple-system,sans-serif;
+  font-family:"Rounded M PLUS 1c", sans-serif;
   background:#fafafa;
   text-align:center;
   margin:0;
   padding:20px;
+}
+
+h1{
+  margin:10px;
 }
 
 /* カード */
@@ -23,27 +30,27 @@ body{
   border-radius:16px;
 }
 
-/* 年月ボタン */
-#monthBtn{
-  cursor:pointer;
-  font-weight:bold;
-  display:inline-block;
-  padding:8px 14px;
-  border-radius:20px;
-  background:#ffe3ea;
-  transition:0.2s;
-}
-#monthBtn:active{
-  transform:scale(0.95);
+/* 月選択 */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-/* 曜日 */
-.week{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  font-size:12px;
-  color:#888;
-  margin-top:10px;
+#monthPicker{
+  font-size:16px;
+  padding:6px;
+  border-radius:10px;
+}
+
+/* ボタン */
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:10px;
+  background:#ff8fab;
+  color:white;
+  margin:5px;
 }
 
 /* カレンダー */
@@ -54,6 +61,7 @@ body{
   margin-top:10px;
 }
 
+/* 日付中央 */
 .day{
   background:#eee;
   border-radius:10px;
@@ -63,45 +71,17 @@ body{
   justify-content:center;
   align-items:center;
   cursor:pointer;
-  font-size:12px;
 }
 
-/* 数字中央 */
 .day-num{
-  font-size:14px;
   font-weight:bold;
+  text-align:center;
 }
 
 /* 今日 */
 .today{
   border:2px solid #ff8fab;
   background:#ffe3ea;
-}
-
-/* 入力 */
-input, textarea{
-  width:90%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:10px;
-  border:1px solid #ddd;
-}
-
-/* ボタン */
-button{
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#ff8fab;
-  color:white;
-  margin:5px;
-}
-
-/* グラフボタン */
-#graphBtn{
-  font-weight:bold;
-  font-size:14px;
-  background:#ffb3c1;
 }
 
 /* モーダル */
@@ -122,18 +102,22 @@ button{
   border-radius:12px;
 }
 
-/* 円グラフ */
+/* グラフ（ドーナツ風） */
 .circle{
   width:180px;
   height:180px;
-  border-radius:50%;
   margin:10px auto;
+  border-radius:50%;
   background:conic-gradient(#ff8fab 0deg,#ffd1dc 120deg,#cdeffd 240deg,#eee 360deg);
 }
 
-/* 編集 */
-#editBtn{
-  background:#aaa;
+/* リスト */
+.list-item{
+  background:#f5f5f5;
+  margin:5px;
+  padding:8px;
+  border-radius:10px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -144,43 +128,29 @@ button{
 
 <div class="card">
 
-  <div id="monthBtn" onclick="openPicker()">2026 / 4 ▼</div>
-
-  <!-- 曜日 -->
-  <div class="week">
-    <div>日</div><div>月</div><div>火</div>
-    <div>水</div><div>木</div><div>金</div><div>土</div>
+  <!-- 月 + 戻る -->
+  <div class="topbar">
+    <input type="month" id="monthPicker" onchange="changeMonth()">
+    <button onclick="todayMonth()">今日へ</button>
   </div>
 
   <div id="calendar"></div>
 
   <hr>
 
-  <div id="selectedDate">日付未選択</div>
+  <div id="selectedDate">日付を選択</div>
 
-  <input id="emoji" placeholder="絵文字1文字のみ" maxlength="2">
-  <textarea id="comment" placeholder="コメント"></textarea>
+  <input id="emoji" placeholder="絵文字1つのみ" maxlength="2">
+  <input id="comment" placeholder="コメント">
 
   <button onclick="save()">保存</button>
-  <button id="editBtn" onclick="enableEdit()">編集</button>
-  <button id="graphBtn" onclick="openGraph()">グラフ</button>
+  <button onclick="openGraph()">グラフ</button>
+  <button onclick="openList()">一覧</button>
 
-</div>
-
-<!-- 月選択 -->
-<div id="picker" class="modal">
-  <div class="modal-content">
-    <h3>年月選択</h3>
-
-    <input type="number" id="year" min="2021" max="2028" value="2026">
-    <input type="number" id="month" min="1" max="12" value="4">
-
-    <button onclick="setMonth()">決定</button>
-  </div>
 </div>
 
 <!-- グラフ -->
-<div id="graph" class="modal">
+<div id="graphModal" class="modal">
   <div class="modal-content">
     <h3>📊 グラフ</h3>
 
@@ -191,29 +161,44 @@ button{
   </div>
 </div>
 
+<!-- リスト -->
+<div id="listModal" class="modal">
+  <div class="modal-content">
+    <h3>📒 月別一覧</h3>
+
+    <div id="list"></div>
+
+    <button onclick="closeList()">閉じる</button>
+  </div>
+</div>
+
 <script>
 
-let current = new Date(2026,3,1);
+let current = new Date();
 let selected = null;
-let editMode = false;
 
-/* ===== 保存制御 ===== */
+/* ===== 初期 ===== */
+document.getElementById("monthPicker").value =
+  `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,"0")}`;
+
+draw();
+
+/* ===== 保存 ===== */
 function save(){
 
-  const e = document.getElementById("emoji").value.trim();
-  const c = document.getElementById("comment").value.trim();
+  let e = document.getElementById("emoji").value.trim();
+  let c = document.getElementById("comment").value.trim();
 
-  // 絵文字1文字制限
   if([...e].length > 1){
-    alert("絵文字は1文字のみ");
+    alert("絵文字は1つのみ");
     return;
   }
 
-  if(!selected) selected = getToday();
-
   let data = JSON.parse(localStorage.getItem("diary")||"{}");
 
-  data[selected] = {emoji:e, comment:c};
+  let date = selected || getToday();
+
+  data[date] = {emoji:e, comment:c};
 
   localStorage.setItem("diary",JSON.stringify(data));
 
@@ -223,7 +208,7 @@ function save(){
 /* ===== カレンダー ===== */
 function draw(){
 
-  const cal = document.getElementById("calendar");
+  let cal = document.getElementById("calendar");
   cal.innerHTML="";
 
   let data = JSON.parse(localStorage.getItem("diary")||"{}");
@@ -231,11 +216,11 @@ function draw(){
   let y=current.getFullYear();
   let m=current.getMonth();
 
-  document.getElementById("monthBtn").innerText =
-    `${y} / ${m+1}`;
+  document.getElementById("monthPicker").value =
+    `${y}-${String(m+1).padStart(2,"0")}`;
 
-  const first=new Date(y,m,1);
-  const last=new Date(y,m+1,0);
+  let first=new Date(y,m,1);
+  let last=new Date(y,m+1,0);
 
   for(let i=0;i<first.getDay();i++){
     cal.innerHTML+="<div></div>";
@@ -245,9 +230,9 @@ function draw(){
 
     let date=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 
-    let today=date===getToday();
-
     let item=data[date];
+
+    let today=date===getToday();
 
     cal.innerHTML+=`
       <div class="day ${today?'today':''}" onclick="select('${date}')">
@@ -258,33 +243,41 @@ function draw(){
   }
 }
 
-/* ===== 選択 ===== */
+/* ===== 日付選択 ===== */
 function select(date){
 
   selected=date;
 
-  let data = JSON.parse(localStorage.getItem("diary")||"{}");
-
-  if(data[date]){
-    document.getElementById("emoji").value=data[date].emoji||"";
-    document.getElementById("comment").value=data[date].comment||"";
-  }else{
-    document.getElementById("emoji").value="";
-    document.getElementById("comment").value="";
-  }
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
 
   document.getElementById("selectedDate").innerText=date;
+
+  document.getElementById("emoji").value=data[date]?.emoji||"";
+  document.getElementById("comment").value=data[date]?.comment||"";
 }
 
-/* ===== 編集制御 ===== */
-function enableEdit(){
-  editMode=true;
+/* ===== 月変更（スクロール） ===== */
+function changeMonth(){
+
+  let v=document.getElementById("monthPicker").value;
+
+  let [y,m]=v.split("-");
+
+  current=new Date(y,m-1,1);
+
+  draw();
+}
+
+/* ===== 今日へ ===== */
+function todayMonth(){
+  current=new Date();
+  draw();
 }
 
 /* ===== グラフ ===== */
 function openGraph(){
 
-  graph.style.display="block";
+  graphModal.style.display="block";
 
   let data=JSON.parse(localStorage.getItem("diary")||"{}");
 
@@ -298,33 +291,48 @@ function openGraph(){
 
   graphData.innerHTML=
     Object.entries(count)
-    .map(([k,v])=>`${k} ${"●".repeat(v)}`)
-    .join("<br>");
+    .map(([k,v])=>`<div onclick="filterEmoji('${k}')">${k} : ${"●".repeat(v)}</div>`)
+    .join("");
 }
 
 function closeGraph(){
-  graph.style.display="none";
+  graphModal.style.display="none";
 }
 
-/* ===== 月変更 ===== */
-function openPicker(){
-  picker.style.display="block";
-}
+/* ===== 絵文字から日付一覧 ===== */
+function filterEmoji(e){
 
-function setMonth(){
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
 
-  let y=parseInt(year.value);
-  let m=parseInt(month.value)-1;
+  let list=[];
 
-  if(y<2021||y>2028){
-    alert("2021〜2028のみ");
-    return;
+  for(let [date,val] of Object.entries(data)){
+    if(val.emoji===e){
+      list.push(`${date} ${val.comment}`);
+    }
   }
 
-  current=new Date(y,m,1);
+  alert(list.join("\n"));
+}
 
-  picker.style.display="none";
-  draw();
+/* ===== 一覧 ===== */
+function openList(){
+
+  listModal.style.display="block";
+
+  let data=JSON.parse(localStorage.getItem("diary")||"{}");
+
+  list.innerHTML=
+    Object.entries(data)
+    .map(([d,v])=>`
+      <div class="list-item" onclick="select('${d}')">
+        ${d} ${v.emoji} ${v.comment}
+      </div>
+    `).join("");
+}
+
+function closeList(){
+  listModal.style.display="none";
 }
 
 /* ===== 今日 ===== */
@@ -332,8 +340,6 @@ function getToday(){
   let d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-
-draw();
 
 </script>
 
