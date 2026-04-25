@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>絵文字日記</title>
+
+<style>
+body{
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:#fafafa;
+  text-align:center;
+  padding:20px;
+  color:#333;
+}
+
+.card{
+  background:white;
+  max-width:420px;
+  margin:20px auto;
+  padding:20px;
+  border-radius:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+input{
+  width:90%;
+  padding:12px;
+  font-size:18px;
+  text-align:center;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
+
+button{
+  margin-top:10px;
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#ff8fab;
+  color:white;
+  font-size:16px;
+}
+
+button:active{
+  transform:scale(0.98);
+}
+
+/* カレンダー */
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:5px;
+  margin-top:20px;
+}
+
+.day{
+  background:#f3f3f3;
+  padding:8px;
+  border-radius:8px;
+  font-size:12px;
+  min-height:40px;
+}
+
+.day span{
+  display:block;
+  font-size:16px;
+  margin-top:5px;
+}
+
+/* トースト */
+.toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#333;
+  color:white;
+  padding:10px 16px;
+  border-radius:20px;
+  opacity:0;
+  transition:0.3s;
+}
+.toast.show{
+  opacity:1;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📔 絵文字日記</h1>
+
+<div class="card">
+
+  <p>今日の気分（絵文字だけ）</p>
+
+  <input id="input" placeholder="例：😊🌧️🍜">
+
+  <button onclick="saveDiary()">保存する</button>
+
+  <h3>📅 カレンダー</h3>
+  <div id="calendar" class="calendar"></div>
+
+</div>
+
+<div id="toast" class="toast">保存しました</div>
+
+<script>
+
+const input = document.getElementById("input");
+const calendar = document.getElementById("calendar");
+const toast = document.getElementById("toast");
+
+loadCalendar();
+
+function saveDiary(){
+  const value = input.value.trim();
+  if(!value) return;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  let data = JSON.parse(localStorage.getItem("diary") || "{}");
+
+  data[today] = value;
+
+  localStorage.setItem("diary", JSON.stringify(data));
+
+  input.value = "";
+
+  showToast("保存しました！");
+  loadCalendar();
+}
+
+function loadCalendar(){
+
+  calendar.innerHTML = "";
+
+  let data = JSON.parse(localStorage.getItem("diary") || "{}");
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month+1, 0);
+
+  // 月初の曜日分空白
+  for(let i=0;i<firstDay.getDay();i++){
+    const empty = document.createElement("div");
+    empty.className = "day";
+    calendar.appendChild(empty);
+  }
+
+  // 日付生成
+  for(let d=1; d<=lastDay.getDate(); d++){
+
+    const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+    const div = document.createElement("div");
+    div.className = "day";
+
+    div.innerHTML = `
+      ${d}
+      <span>${data[dateStr] || ""}</span>
+    `;
+
+    calendar.appendChild(div);
+  }
+}
+
+function showToast(msg){
+  toast.innerText = msg;
+  toast.classList.add("show");
+
+  setTimeout(()=>{
+    toast.classList.remove("show");
+  },1500);
+}
+
+</script>
+
+</body>
+</html>
